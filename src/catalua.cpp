@@ -38,6 +38,17 @@
 #include "filesystem.h"
 #include "string_input_popup.h"
 #include "mutation.h"
+/**
+* Lua Extention start
+*/
+#include "npc.h"
+#include "vehicle.h"
+#include "veh_type.h"
+#include "fault.h"
+#include "bionics.h"
+/**
+* Lua Extention end
+*/
 extern "C" {
 #include "lua.h"
 #include "lualib.h"
@@ -1099,6 +1110,103 @@ static int game_register_iuse(lua_State *L)
     return 0; // 0 return values
 }
 
+/**
+* Lua Extention start
+*/
+class lua_mattack_wrapper : public mattack_actor
+{
+private:
+    int lua_function;
+public:
+    lua_mattack_wrapper(const mattack_id &id, const int f)
+        : mattack_actor(id)
+        , lua_function(f) { }
+
+    ~lua_mattack_wrapper() override = default;
+    bool call(monster &m) const override {
+        lua_State * const L = lua_state;
+
+        // If it's a lua function, the arguments have to be wrapped in
+        // lua userdata's and passed on the lua stack.
+        // We will now call the function f(monster)
+
+        update_globals(L);
+
+        // Push the lua function on top of the stack
+        lua_rawgeti(L, LUA_REGISTRYINDEX, lua_function);
+
+        // Push the monster on top of the stack.
+        const int monster_in_registry = LuaReference<monster>::push_reg(L, m);
+
+        // Call the iuse function
+        int err = lua_pcall(L, 1, 1, 0);
+        lua_report_error(L, err, "monattack function");
+
+        // Make sure the now outdated parameters we passed to lua aren't
+        // being used anymore by setting a metatable that will error on
+        // access.
+        luah_remove_from_registry(L, monster_in_registry);
+        luah_setmetatable(L, "outdated_metatable");
+
+        return lua_toboolean(L, -1);
+    }
+    mattack_actor *clone() const override {
+        return new lua_mattack_wrapper(*this);
+    }
+
+    void load_internal(JsonObject &, const std::string &) override {}
+};
+
+void MonsterGenerator::register_monattack_lua(const std::string &name, int lua_function)
+{
+    add_attack( mtype_special_attack( new lua_mattack_wrapper(name, lua_function) ) );
+}
+
+static int game_register_monattack(lua_State *L)
+{
+    // Make sure the first argument is a string.
+    const char *name = luaL_checkstring(L, 1);
+    if (!name) {
+        return luaL_error(L, "First argument to game.register_monattack is not a string.");
+    }
+
+    // Make sure the second argument is a function
+    luaL_checktype(L, 2, LUA_TFUNCTION);
+
+    // function_object is at the top of the stack, so we can just pop
+    // it with luaL_ref
+    int function_index = luaL_ref(L, LUA_REGISTRYINDEX);
+
+    // Now register function_object with our monattack's
+    (&MonsterGenerator::generator())->register_monattack_lua(name, function_index);
+
+    return 0; // 0 return values
+}
+
+static int game_get_vehicles(lua_State *L)
+{
+    VehicleList vehicles = g->m.get_vehicles();
+    
+    lua_createtable(L, vehicles.size(), 0);
+
+    for( size_t i = 0; i < vehicles.size(); ++i ) {
+        // The stack will look like this:
+        // 1 - t, table containing id
+        // 2 - k, index at which the next id will be inserted
+        // 3 - v, next id to insert
+        //
+        // lua_rawset then does t[k] = v and pops v and k from the stack
+
+        lua_pushnumber(L, i + 1);
+        LuaReference<vehicle>::push( L, vehicles[i].v );
+        lua_rawset(L, -3);
+    }
+
+    return 1; // 1 return values
+}
+/**
+* Lua Extention end
+*/
 #include "lua/catabindings.cpp"
 
 // Load the main file of a mod
@@ -1187,6 +1295,14 @@ static const struct luaL_Reg global_funcs [] = {
     {"dofile", game_dofile},
     {"get_monster_types", game_get_monster_types},
     {"get_item_groups", game_get_item_groups},
+    /**
+    * Lua Extention start
+    */
+    { "register_monattack", game_register_monattack },
+    { "get_vehicles", game_get_vehicles },
+    /**
+    * Lua Extention end
+    */
     {NULL, NULL}
 };
 

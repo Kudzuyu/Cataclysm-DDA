@@ -105,6 +105,7 @@
 #include "monexamine.h"
 #include "loading_ui.h"
 #include "sidebar.h"
+#include "user_tiles.h"
 
 #include <map>
 #include <set>
@@ -211,6 +212,7 @@ game *g;
 #ifdef TILES
 extern std::unique_ptr<cata_tiles> tilecontext;
 extern void toggle_fullscreen_window();
+extern std::unique_ptr<user_tile> user_tile_setting;
 #endif // TILES
 
 uistatedata uistate;
@@ -2213,6 +2215,7 @@ input_context get_default_mode_input_context()
     ctxt.register_action("MOUSE_MOVE");
     ctxt.register_action("SELECT");
     ctxt.register_action("SEC_SELECT");
+    ctxt.register_action("tile_edit_mode");
     return ctxt;
 }
 
@@ -3471,6 +3474,12 @@ bool game::handle_action()
 
         case ACTION_AUTOATTACK:
             autoattack();
+            break;
+
+        case ACTION_TILE_EDIT_MODE:
+            if( user_tile_setting ) {
+                user_tile_setting->item_tile_edit();
+            }
             break;
 
         default:
@@ -13990,3 +13999,52 @@ std::string game::get_world_base_save_path() const
 {
     return world_generator->active_world->folder_path();
 }
+
+/**
+* Lua Extention start
+*/
+Character * game::character_at( const tripoint &p )
+{
+    auto critter = critter_at<Creature>( p );
+    if ( critter ) {
+        if ( critter->is_npc() || critter->is_player() ) {
+            return critter_at<Character>( p );
+        }
+    }
+    return nullptr;
+}
+
+player * game::player_at( const tripoint &p )
+{
+    auto critter = critter_at<Creature>( p );
+    if ( critter ) {
+        if ( critter->is_npc() || critter->is_player() ) {
+            return critter_at<player>( p );
+        }
+    }
+    return nullptr;
+}
+
+npc * game::npc_at( const tripoint &p )
+{
+    auto critter = critter_at<Creature>( p );
+    if ( critter ) {
+        if ( critter->is_npc() ) {
+            return critter_at<npc>( p );
+        }
+    }
+    return nullptr;
+}
+
+time_point game::time_point_from_turn( int turn )
+{
+    return time_point::from_turn( turn );
+}
+
+time_duration game::time_duration_from_turns( int turns )
+{
+    return time_duration::from_turns( turns );
+}
+/**
+* Lua Extention end
+*/
