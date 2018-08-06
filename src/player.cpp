@@ -652,14 +652,14 @@ void player::reset_stats()
     set_fake_effect_dur( effect_stim, 1_turns * stim );
     set_fake_effect_dur( effect_depressants, 1_turns * -stim );
     set_fake_effect_dur( effect_stim_overdose, 1_turns * ( stim - 30 ) );
-    // Hunger
-    if( get_hunger() >= 500 ) {
+    // Starvation
+    if( get_starvation() >= 200 ) {
         // We die at 6000
-        const int dex_mod = -get_hunger() / 1000;
+        const int dex_mod = -( get_starvation() + 300 ) / 1000;
         add_miss_reason( _( "You're weak from hunger." ), unsigned( -dex_mod ) );
-        mod_str_bonus( -get_hunger() / 500 );
+        mod_str_bonus( -( get_starvation() + 300 ) / 500 );
         mod_dex_bonus( dex_mod );
-        mod_int_bonus( -get_hunger() / 1000 );
+        mod_int_bonus( -( get_starvation() + 300 ) / 1000 );
     }
     // Thirst
     if( get_thirst() >= 200 ) {
@@ -1012,7 +1012,7 @@ void player::update_bodytemp()
     /**
      * Calculations that affect all body parts equally go here, not in the loop
      */
-    // Hunger
+    // Hunger / Starvation
     // -1000 when about to starve to death
     // -1333 when starving with light eater
     // -2000 if you managed to get 0 metabolism rate somehow
@@ -1108,7 +1108,7 @@ void player::update_bodytemp()
         // Convergent temperature is affected by ambient temperature,
         // clothing warmth, and body wetness.
         temp_conv[bp] = BODYTEMP_NORM + adjusted_temp + windchill * 100 + clothing_warmth_adjustement;
-        // HUNGER
+        // HUNGER / STARVATION
         temp_conv[bp] += hunger_warmth;
         // FATIGUE
         temp_conv[bp] += fatigue_warmth;
@@ -1506,6 +1506,8 @@ int player::floor_bedding_warmth( const tripoint &pos )
         floor_bedding_warmth -= 500;
     } else if( trap_at_pos.loadid == tr_rollmat ) {
         floor_bedding_warmth -= 1000;
+    } else if( furn_at_pos == f_chair || furn_at_pos == f_bench ) {
+        floor_bedding_warmth -= 1500;
     } else {
         floor_bedding_warmth -= 2000;
     }
@@ -1742,8 +1744,8 @@ void player::recalc_speed_bonus()
     if( get_thirst() > 40 ) {
         mod_speed_bonus( thirst_speed_penalty( get_thirst() ) );
     }
-    if( get_hunger() > 100 ) {
-        mod_speed_bonus( hunger_speed_penalty( get_hunger() ) );
+    if( ( get_hunger() + get_starvation() ) > 100 ) {
+        mod_speed_bonus( hunger_speed_penalty( get_hunger() + get_starvation() ) );
     }
 
     for( auto maps : *effects ) {
@@ -2823,9 +2825,7 @@ bool player::sight_impaired() const
                !worn_with_flag( "SWIM_GOGGLES" ) && !has_trait( trait_PER_SLIME_OK ) &&
                !has_trait( trait_CEPH_EYES ) ) ||
              ( ( has_trait( trait_MYOPIC ) || has_trait( trait_URSINE_EYE ) ) &&
-               !is_wearing( "glasses_eye" ) &&
-               !is_wearing( "glasses_monocle" ) &&
-               !is_wearing( "glasses_bifocal" ) &&
+               !worn_with_flag( "FIX_NEARSIGHT" ) &&
                !has_effect( effect_contacts ) &&
                !has_bionic( bio_eye_optic ) ) ||
                 has_trait( trait_PER_SLIME ) );
@@ -4167,15 +4167,15 @@ void player::check_needs_extremes()
     }
 
     // Check if we're starving or have starved
-    if( is_player() && get_hunger() >= 3000 ) {
-        if (get_hunger() >= 6000) {
+    if( is_player() && get_hunger() >= 300 && get_starvation() >= 2700 ) {
+        if( get_starvation() >= 5700 ) {
             add_msg_if_player(m_bad, _("You have starved to death."));
             add_memorial_log(pgettext("memorial_male", "Died of starvation."),
                                pgettext("memorial_female", "Died of starvation."));
             hp_cur[hp_torso] = 0;
-        } else if( get_hunger() >= 5000 && calendar::once_every( 1_hours ) ) {
+        } else if( get_starvation() >= 4700 && calendar::once_every( 1_hours ) ) {
             add_msg_if_player(m_warning, _("Food..."));
-        } else if( get_hunger() >= 4000 && calendar::once_every( 1_hours ) ) {
+        } else if( get_starvation() >= 3700 && calendar::once_every( 1_hours ) ) {
             add_msg_if_player(m_warning, _("You are STARVING!"));
         } else if( calendar::once_every( 1_hours ) ) {
             add_msg_if_player(m_warning, _("Your stomach feels so empty..."));
@@ -4289,6 +4289,13 @@ void player::update_needs( int rate_multiplier )
     if( !foodless && hunger_rate > 0.0f ) {
         const int rolled_hunger = divide_roll_remainder( hunger_rate * rate_multiplier, 1.0 );
         mod_hunger( rolled_hunger );
+
+        // if the playing is famished, starvation increases
+        if( get_hunger() >= 300 ) {
+            mod_starvation( rolled_hunger );
+        } else {
+            mod_starvation( -rolled_hunger );
+        }
     }
 
     if( !foodless && thirst_rate > 0.0f ) {
@@ -4754,6 +4761,16 @@ void player::process_one_effect( effect &it, bool is_new )
         if( is_new || it.activated( calendar::turn, "HUNGER", val, reduced, mod ) ) {
             mod_hunger(bound_mod_to_vals(get_hunger(), val, it.get_max_val("HUNGER", reduced),
                                         it.get_min_val("HUNGER", reduced)));
+        }
+    }
+
+    // Handle starvation
+    val = get_effect("STARVATION", reduced);
+    if(val != 0) {
+        mod = 1;
+        if( is_new || it.activated( calendar::turn, "STARVATION", val, reduced, mod ) ) {
+            mod_starvation(bound_mod_to_vals(get_starvation(), val, it.get_max_val("STARVATION", reduced),
+                                        it.get_min_val("STARVATION", reduced)));
         }
     }
 
@@ -6496,7 +6513,7 @@ void player::check_and_recover_morale()
         }
     }
 
-    test_morale.on_stat_change( "hunger", get_hunger() );
+    test_morale.on_stat_change( "hunger", get_hunger() + get_starvation() );
     test_morale.on_stat_change( "thirst", get_thirst() );
     test_morale.on_stat_change( "fatigue", get_fatigue() );
     test_morale.on_stat_change( "pain", get_pain() );
@@ -8929,16 +8946,16 @@ const player *player::get_book_reader( const item &book, std::vector<std::string
     const skill_id &skill = type->skill;
     const int skill_level = get_skill_level( skill );
     if( skill && skill_level < type->req && has_identified( book.typeId() ) ) {
-        reasons.push_back( string_format( _( "You don't know enough about %s to understand the jargon!" ),
-                                          skill.obj().name().c_str() ) );
+        reasons.push_back( string_format( _( "You need %s %d to understand the jargon!" ),
+                                          skill.obj().name().c_str(), type->req ) );
         return nullptr;
     }
 
     // Check for conditions that disqualify us only if no NPCs can read to us
     if( type->intel > 0 && has_trait( trait_ILLITERATE ) ) {
         reasons.emplace_back( _( "You're illiterate!" ) );
-    } else if( has_trait( trait_HYPEROPIC ) && !is_wearing( "glasses_reading" ) &&
-               !is_wearing( "glasses_bifocal" ) && !has_effect( effect_contacts ) && !has_bionic( bio_eye_optic ) ) {
+    } else if( has_trait( trait_HYPEROPIC ) && !worn_with_flag( "FIX_FARSIGHT" ) &&
+               !has_effect( effect_contacts ) && !has_bionic( bio_eye_optic ) ) {
         reasons.emplace_back( _( "Your eyes won't focus without reading glasses." ) );
     } else if( fine_detail_vision_mod() > 4 ) {
         // Too dark to read only applies if the player can read to himself
@@ -8965,10 +8982,10 @@ const player *player::get_book_reader( const item &book, std::vector<std::string
                                               elem->disp_name().c_str() ) );
         } else if( skill && elem->get_skill_level( skill ) < type->req &&
                    has_identified( book.typeId() ) ) {
-            reasons.push_back( string_format( _( "%s doesn't know enough about %s to understand the jargon!" ),
-                                              elem->disp_name().c_str(), skill.obj().name().c_str() ) );
-        } else if( elem->has_trait( trait_HYPEROPIC ) && !elem->is_wearing( "glasses_reading" ) &&
-                   !elem->is_wearing( "glasses_bifocal" ) && !elem->has_effect( effect_contacts ) ) {
+            reasons.push_back( string_format( _( "%s needs %s %d to understand the jargon!" ),
+                                              elem->disp_name().c_str(), skill.obj().name().c_str(), type->req ) );
+        } else if( elem->has_trait( trait_HYPEROPIC ) && !elem->worn_with_flag( "FIX_FARSIGHT" ) &&
+                   !elem->has_effect( effect_contacts ) ) {
             reasons.push_back( string_format( _( "%s needs reading glasses!" ),
                                               elem->disp_name().c_str() ) );
         } else if( std::min( fine_detail_vision_mod(), elem->fine_detail_vision_mod() ) > 4 ) {
@@ -9753,7 +9770,8 @@ int player::sleep_spot( const tripoint &p ) const
             sleepy += 3;
         } else if (furn_at_pos == f_straw_bed || furn_at_pos == f_hay || furn_at_pos == f_tatami) {
             sleepy += 2;
-        } else if (ter_at_pos == t_floor || ter_at_pos == t_floor_waxed ||
+        } else if (furn_at_pos == f_chair || furn_at_pos == f_bench ||
+                    ter_at_pos == t_floor || ter_at_pos == t_floor_waxed ||
                     ter_at_pos == t_carpet_red || ter_at_pos == t_carpet_yellow ||
                     ter_at_pos == t_carpet_green || ter_at_pos == t_carpet_purple) {
             sleepy += 1;
