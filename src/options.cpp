@@ -1031,7 +1031,7 @@ void options_manager::init()
           { "es_ES", R"( Español ( España ) )" },
           { "ja", R"( 日本語 )" },
           { "ko", R"( 한국어 )" },
-          { "pl", R"( Polskie )" },
+          { "pl", R"( Polski )" },
           { "pt_BR", R"( Português ( Brasil ) )" },
           { "ru", R"( Русский )" },
           { "zh_CN", R"( 中文( 天朝 ) )" },
@@ -1237,8 +1237,8 @@ void options_manager::init()
 
     get_option("ANIMATION_SCT").setPrerequisite("ANIMATIONS");
 
-    add( "ANIMATION_SCT_USE_FONT", "graphics", translate_marker( "SCT with unicode font" ),
-        translate_marker( "If true, will display scrolling combat text with unicode font." ),
+    add( "ANIMATION_SCT_USE_FONT", "graphics", translate_marker( "SCT with Unicode font" ),
+        translate_marker( "If true, will display scrolling combat text with Unicode font." ),
         true
         );
 
