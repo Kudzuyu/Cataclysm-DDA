@@ -842,6 +842,8 @@ classes = {
             { name = "rem_morale", rval = nil, args = { "morale_type", "itype" } },
             { name = "add_bionic", rval = nil, args = { "bionic_id" } },
             { name = "remove_bionic", rval = nil, args = { "bionic_id" } },
+            { name = "time_to_read", rval = "int", args = { "item", "player" } },
+            { name = "time_to_read", rval = "int", args = { "item", "player", "player" } },
             -- [LUA Extention] end
         }
     },
