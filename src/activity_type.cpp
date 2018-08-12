@@ -97,7 +97,7 @@ void activity_type::check_consistency()
 
 void activity_type::call_do_turn( player_activity *act, player *p ) const
 {
-    auto &lua_pair = activity_handlers::lua_do_turn_functions.find( id_ );
+    const auto &lua_pair = activity_handlers::lua_do_turn_functions.find( id_ );
     if( lua_pair != activity_handlers::lua_do_turn_functions.end() ) {
         lua_pair->second->call( act, p );
     }
@@ -110,7 +110,7 @@ void activity_type::call_do_turn( player_activity *act, player *p ) const
 
 bool activity_type::call_finish( player_activity *act, player *p ) const
 {
-    auto &lua_pair = activity_handlers::lua_finish_functions.find( id_ );
+    const auto &lua_pair = activity_handlers::lua_finish_functions.find( id_ );
     if( lua_pair != activity_handlers::lua_finish_functions.end() ) {
         lua_pair->second->call( act, p );
         return true;
@@ -129,6 +129,7 @@ void activity_type::reset()
     activity_type_all.clear();
 }
 
+template<>
 bool string_id<activity_type>::is_valid() const
 {
     return activity_type_all.count( *this ) > 0;
