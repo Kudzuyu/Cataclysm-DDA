@@ -706,8 +706,8 @@ void draw( const catacurses::window &w, const catacurses::window &wbar, const tr
         print_hint( "LIST_NOTES" );
         print_hint( "TOGGLE_BLINKING" );
         print_hint( "TOGGLE_OVERLAYS" );
-        print_hint( "TOGGLE_CITY_LABELS" );
-        print_hint( "TOGGLE_HORDES" );
+        print_hint( "TOGGLE_CITY_LABELS", uistate.overmap_show_city_labels ? c_pink : c_magenta );
+        print_hint( "TOGGLE_HORDES", uistate.overmap_show_hordes ? c_pink : c_magenta );
         print_hint( "TOGGLE_EXPLORED" );
         print_hint( "HELP_KEYBINDINGS" );
         print_hint( "QUIT" );
@@ -1085,7 +1085,6 @@ tripoint display( const tripoint &orig, const draw_data_t &data = draw_data_t() 
 }
 
 } // anonymous namespace
-
 
 void ui::omap::display()
 {
