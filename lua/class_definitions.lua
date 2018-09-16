@@ -1931,9 +1931,7 @@ classes = {
             index = { type = "int", writable = true },
             position = { type = "int", writable = true },
             name = { type = "string", writable = true },
-            ignore_trivial = { type = "bool", writable = true },
             placement = { type = "tripoint", writable = true },
-            warned_of_proximity = { type = "bool", writable = true },
             auto_resume = { type = "bool", writable = true },
         },
         new = {
