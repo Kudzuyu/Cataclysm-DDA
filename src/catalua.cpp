@@ -1292,27 +1292,6 @@ public:
     }
 };
 
-static int game_register_monattack(lua_State *L)
-{
-    // Make sure the first argument is a string.
-    const char *name = luaL_checkstring(L, 1);
-    if (!name) {
-        return luaL_error(L, "First argument to game.register_monattack is not a string.");
-    }
-
-    // Make sure the second argument is a function
-    luaL_checktype(L, 2, LUA_TFUNCTION);
-
-    // function_object is at the top of the stack, so we can just pop
-    // it with luaL_ref
-    int function_index = luaL_ref(L, LUA_REGISTRYINDEX);
-
-    // Now register function_object with our monattack's
-    (&MonsterGenerator::generator())->register_monattack_lua(name, function_index);
-
-    return 0; // 0 return values
-}
-
 static int game_register_activity_do_turn( lua_State *L )
 {
     // Make sure the first argument is a string.
