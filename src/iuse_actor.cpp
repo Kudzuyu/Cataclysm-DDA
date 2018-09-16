@@ -86,6 +86,8 @@ static const trait_id trait_SELFAWARE( "SELFAWARE" );
 static const trait_id trait_TOLERANCE( "TOLERANCE" );
 static const trait_id trait_MUT_JUNKIE( "MUT_JUNKIE" );
 
+static const bionic_id bio_syringe( "bio_syringe" );
+
 iuse_actor *iuse_transform::clone() const
 {
     return new iuse_transform( *this );
@@ -529,14 +531,18 @@ void consume_drug_iuse::info( const item &, std::vector<iteminfo> &dump ) const
     }
 
     if( tools_needed.count( "syringe" ) ) {
-        dump.emplace_back( "TOOL", _( "You need a <info>syringe</info> to inject this drug" ) );
+        dump.emplace_back( "TOOL", _( "You need a <info>syringe</info> to inject this drug." ) );
     }
 }
 
 long consume_drug_iuse::use( player &p, item &it, bool, const tripoint & ) const
 {
+    auto need_these = tools_needed;
+    if( need_these.count( "syringe" ) && p.has_bionic( bio_syringe ) ) {
+        need_these.erase( "syringe" ); // no need for a syringe with bionics like these!
+    }
     // Check prerequisites first.
-    for( auto tool = tools_needed.cbegin(); tool != tools_needed.cend(); ++tool ) {
+    for( auto tool = need_these.cbegin(); tool != need_these.cend(); ++tool ) {
         // Amount == -1 means need one, but don't consume it.
         if( !p.has_amount( tool->first, 1 ) ) {
             p.add_msg_player_or_say( _( "You need %1$s to consume %2$s!" ),
@@ -2043,6 +2049,9 @@ bool holster_actor::can_holster( const item &obj ) const
     if( max_weight > 0 && obj.weight() > max_weight ) {
         return false;
     }
+    if( obj.active ) {
+        return false;
+    }
     return std::any_of( flags.begin(), flags.end(), [&]( const std::string & f ) {
         return obj.has_flag( f );
     } ) ||
@@ -2071,6 +2080,12 @@ bool holster_actor::store( player &p, item &holster, item &obj ) const
 
     if( max_weight > 0 && obj.weight() > max_weight ) {
         p.add_msg_if_player( m_info, _( "Your %1$s is too heavy to fit in your %2$s" ),
+                             obj.tname().c_str(), holster.tname().c_str() );
+        return false;
+    }
+
+    if( obj.active ) {
+        p.add_msg_if_player( m_info, _( "You don't think putting your %1$s in your %2$s is a good idea" ),
                              obj.tname().c_str(), holster.tname().c_str() );
         return false;
     }
@@ -2653,11 +2668,15 @@ std::pair<float, float> repair_item_actor::repair_chance(
 repair_item_actor::repair_type repair_item_actor::default_action( const item &fix,
         int current_skill_level ) const
 {
+    const bool smol = g->u.has_trait( trait_id( "SMALL2" ) ) ||
+                      g->u.has_trait( trait_id( "SMALL_OK" ) );
     if( fix.damage() > 0 ) {
         return RT_REPAIR;
     }
 
-    if( fix.has_flag( "VARSIZE" ) && !fix.has_flag( "FIT" ) ) {
+    if( ( fix.has_flag( "VARSIZE" ) && !fix.has_flag( "FIT" ) ) ||
+        ( smol && !fix.has_flag( "UNDERSIZE" ) )  ||
+        ( !smol && fix.has_flag( "UNDERSIZE" ) ) ) {
         return RT_REFIT;
     }
 
@@ -2752,9 +2771,20 @@ repair_item_actor::attempt_hint repair_item_actor::repair( player &pl, item &too
 
     if( action == RT_REFIT ) {
         if( roll == SUCCESS ) {
+            const bool smol = g->u.has_trait( trait_id( "SMALL2" ) ) ||
+                              g->u.has_trait( trait_id( "SMALL_OK" ) );
             pl.add_msg_if_player( m_good, _( "You take your %s in, improving the fit." ),
                                   fix.tname().c_str() );
             fix.item_tags.insert( "FIT" );
+            if( smol && !fix.has_flag( "UNDERSIZE" ) ) {
+                pl.add_msg_if_player( m_good, _( "You resize the %s to accommodate your tiny build." ),
+                                      fix.tname().c_str() );
+                fix.item_tags.insert( "UNDERSIZE" );
+            } else if( !smol && fix.has_flag( "UNDERSIZE" ) ) {
+                pl.add_msg_if_player( m_good, _( "You adjust the %s back to its normal size." ),
+                                      fix.tname().c_str() );
+                fix.item_tags.erase( "UNDERSIZE" );
+            }
             handle_components( pl, fix, false, false );
             return AS_SUCCESS;
         }
