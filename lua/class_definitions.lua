@@ -375,6 +375,9 @@ classes = {
             { name = "unload", rval = nil, args = { }, optional_args = { "int" }  },
             { name = "use_computer", rval = nil, args = { "tripoint" } },
             -- [LUA Extention] start
+            { name = "reload_npcs", rval = nil, args = { } },
+            { name = "place_player", rval = nil, args = { "tripoint" } },
+            { name = "place_player_overmap", rval = nil, args = { "tripoint" } },
             -- 以下の関数は本家のアップデートで同等のものが追加されているので、そちらを使うようお願いします。(一応互換性のため残しておきます)
             { name = "character_at", rval = "Character&", args = { "tripoint" } },
             { name = "player_at", rval = "player&", args = { "tripoint" } },
@@ -2660,7 +2663,15 @@ global_functions = {
         cpp_name = "get_omt_dir",
         args = { "overmap", "tripoint" },
         rval = "overmap_direction"
-    }
+    },
+    -- [LUA Extention] start
+    choose_point = {
+        cpp_name = "ui::omap::choose_point",
+        args = { },
+        optional_args = { "tripoint" },
+        rval = "tripoint"
+    },
+    -- [LUA Extention] end
 }
 
 function table_unpack_wrapper(args)

@@ -1,4 +1,4 @@
-Cataclysm: DDA LUA Extention
+Cataclysm: DDA LUA Extension
 
 ■サポートVersion
 同梱のversion.txtを参照。
@@ -31,6 +31,12 @@ cataclysm-tiles-luaex(.exe)からゲームを開始してください。
 
 ■更新履歴
 ※本家CDDAへの追従は随時行っています
+・0.C-7994相当版
+  LUA関数を拡張(マップ移動関連)。
+  NPC関連のLUA関数拡張が本家に統合されたのに合わせ、不要な関数等を整理しました。
+  サンプルMODを追加。
+  ・telepoter - 瞬間移動テストMOD。
+
 ・0.C-7686相当版
   player_activity(木の伐採やクラフトなどの長時間に及ぶ行動)をLUAから設定できるようにした。
   LUA関数を少しだけ拡張。

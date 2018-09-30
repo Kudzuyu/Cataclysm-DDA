@@ -49,6 +49,7 @@
 #include "fault.h"
 #include "activity_handlers.h"
 #include "player_activity.h"
+#include "overmap_ui.h"
 /**
 * Lua Extention end
 */

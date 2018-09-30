@@ -1,0 +1,11 @@
+[
+  {
+    "type": "MOD_INFO",
+    "ident": "telepoter_test_mod",
+    "name": "瞬間移動テスト",
+    "authors": [ "LISP" ],
+    "maintainers": [ "LISP" ],
+    "description": "瞬間移動テスト用のMODです。",
+    "dependencies": [ "dda" ]
+  }
+]
