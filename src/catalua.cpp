@@ -38,16 +38,16 @@
 #include "filesystem.h"
 #include "string_input_popup.h"
 #include "mutation.h"
+#include "npc.h"
+#include "bionics.h"
+#include "activity_type.h"
 /**
 * Lua Extention start
 */
-#include "npc.h"
 #include "vehicle.h"
 #include "veh_type.h"
 #include "fault.h"
-#include "bionics.h"
 #include "activity_handlers.h"
-#include "activity_type.h"
 #include "player_activity.h"
 /**
 * Lua Extention end

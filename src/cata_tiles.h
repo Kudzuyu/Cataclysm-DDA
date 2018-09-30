@@ -247,6 +247,7 @@ class tileset
         std::vector<texture> shadow_tile_values;
         std::vector<texture> night_tile_values;
         std::vector<texture> overexposed_tile_values;
+        std::vector<texture> memory_tile_values;
 
         std::unordered_map<std::string, tile_type> tile_ids;
 
@@ -282,6 +283,9 @@ class tileset
         }
         const texture *get_overexposed_tile( const size_t index ) const {
             return get_if_available( index, overexposed_tile_values );
+        }
+        const texture *get_memory_tile( const size_t index ) const {
+            return get_if_available( index, memory_tile_values );
         }
 
         tile_type &create_tile_type( const std::string &id, tile_type &&new_tile_type );
@@ -354,7 +358,7 @@ class tileset_loader
          */
         void load_tilejson_from_file( JsonObject &config );
         /**
-         * Helper functions called by load.
+         * Helper function called by load.
          * @throw std::exception On any error.
          */
         void load_internal( JsonObject &config, const std::string &tileset_root,
@@ -415,6 +419,7 @@ class cata_tiles
 
         const tile_type *find_tile_with_season( std::string &id );
         const tile_type *find_tile_looks_like( std::string &id, TILE_CATEGORY category );
+        bool find_overlay_looks_like( const bool male, const std::string &overlay, std::string &draw_id );
 
         bool draw_from_id_string( std::string id, tripoint pos, int subtile, int rota, lit_level ll,
                                   bool apply_night_vision_goggles );
@@ -450,6 +455,7 @@ class cata_tiles
                                const visibility_variables &cache, int &height_3d );
         bool apply_vision_effects( const tripoint &pos, const visibility_type visibility );
         bool draw_terrain( const tripoint &p, lit_level ll, int &height_3d );
+        bool draw_terrain_from_memory( const tripoint &p, int &height_3d );
         bool draw_terrain_below( const tripoint &p, lit_level ll, int &height_3d );
         bool draw_furniture( const tripoint &p, lit_level ll, int &height_3d );
         bool draw_trap( const tripoint &p, lit_level ll, int &height_3d );
